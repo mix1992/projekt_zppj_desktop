@@ -10,6 +10,7 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Modality;
+import okhttp3.ResponseBody;
 import radio.Main;
 import radio.rest.DTO.StationDTO;
 import radio.rest.DTO.StationPathDTO;
@@ -34,6 +35,8 @@ public class RadioController {
     public TableColumn nameColumn;
     @FXML
     public TableColumn addressColumn;
+    @FXML
+    public Label currentPlayedPath;
 
     ObservableList<StationDTO> stations = FXCollections.observableArrayList();
 
@@ -71,15 +74,15 @@ public class RadioController {
             }
         });
 
-        table.setRowFactory( tv -> {
+        table.setRowFactory(tv -> {
             TableRow<StationDTO> row = new TableRow<>();
             row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && (! row.isEmpty()) ) {
+                if (event.getClickCount() == 2 && (!row.isEmpty())) {
                     StationDTO rowData = row.getItem();
-                    Call<Object> callStart = Main.getRestService().startRadio(Main.getToken(), new StationPathDTO(rowData.getPath()));
-                    callStart.enqueue(new Callback<Object>() {
+                    Call<ResponseBody> callStart = Main.getRestService().startRadio(Main.getToken(), new StationPathDTO(rowData.getPath()));
+                    callStart.enqueue(new Callback<ResponseBody>() {
                         @Override
-                        public void onResponse(Call<Object> call, Response<Object> response) {
+                        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                             if (response.isSuccessful()) {
                             } else {
                                 System.out.println(response.errorBody());
@@ -87,15 +90,16 @@ public class RadioController {
                         }
 
                         @Override
-                        public void onFailure(Call<Object> call, Throwable throwable) {
+                        public void onFailure(Call<ResponseBody> call, Throwable throwable) {
                             System.out.println(throwable.getMessage());
                         }
                     });
                 }
             });
-            return row ;
+            return row;
         });
 
+        refreshCurrentPlayedStationLabel();
     }
 
     public void start(ActionEvent actionEvent) {
@@ -106,18 +110,19 @@ public class RadioController {
             alert.initModality(Modality.APPLICATION_MODAL);
             alert.show();
         } else {
-            Call<Object> call = Main.getRestService().startRadio(Main.getToken(), new StationPathDTO(addressInput.getText().toString()));
-            call.enqueue(new Callback<Object>() {
+            Call<ResponseBody> call = Main.getRestService().startRadio(Main.getToken(), new StationPathDTO(addressInput.getText().toString()));
+            call.enqueue(new Callback<ResponseBody>() {
                 @Override
-                public void onResponse(Call<Object> call, Response<Object> response) {
+                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                     if (response.isSuccessful()) {
+                        refreshCurrentPlayedStationLabel();
                     } else {
                         System.out.println(response.errorBody());
                     }
                 }
 
                 @Override
-                public void onFailure(Call<Object> call, Throwable throwable) {
+                public void onFailure(Call<ResponseBody> call, Throwable throwable) {
                     System.out.println(throwable.getMessage());
                 }
             });
@@ -125,18 +130,19 @@ public class RadioController {
     }
 
     public void stop(ActionEvent actionEvent) {
-        Call<Object> call = Main.getRestService().stopRadio(Main.getToken());
-        call.enqueue(new Callback<Object>() {
+        Call<ResponseBody> call = Main.getRestService().stopRadio(Main.getToken());
+        call.enqueue(new Callback<ResponseBody>() {
             @Override
-            public void onResponse(Call<Object> call, Response<Object> response) {
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                 if (response.isSuccessful()) {
+                    refreshCurrentPlayedStationLabel();
                 } else {
                     System.out.println(response.errorBody());
                 }
             }
 
             @Override
-            public void onFailure(Call<Object> call, Throwable throwable) {
+            public void onFailure(Call<ResponseBody> call, Throwable throwable) {
                 System.out.println(throwable.getMessage());
             }
         });
@@ -179,6 +185,32 @@ public class RadioController {
                     stations.remove(table.getSelectionModel().getFocusedIndex());
                 } else {
                     System.out.println(response.body());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<StationDTO> call, Throwable throwable) {
+                System.out.println(throwable.getMessage());
+            }
+        });
+    }
+
+    private void refreshCurrentPlayedStationLabel() {
+        Call<StationDTO> currentStation = Main.restService.getCurrentStation(Main.getToken());
+        currentStation.enqueue(new Callback<StationDTO>() {
+            @Override
+            public void onResponse(Call<StationDTO> call, Response<StationDTO> response) {
+                if (response.isSuccessful()) {
+                    StationDTO current = response.body();
+                    Platform.runLater(() -> {
+                        if (current.getPath() == null || current.getPath().isEmpty()) {
+                            currentPlayedPath.setText("Nic nie jest odtwarzane");
+                        } else {
+                            currentPlayedPath.setText(current.getPath());
+                        }
+                    });
+                } else {
+                    System.out.println(response.errorBody());
                 }
             }
 

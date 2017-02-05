@@ -1,5 +1,6 @@
 package radio.rest;
 
+import okhttp3.ResponseBody;
 import radio.rest.DTO.LoginResponseMessage;
 import radio.rest.DTO.StationDTO;
 import radio.rest.DTO.StationPathDTO;
@@ -17,10 +18,10 @@ public interface RestService {
     Call<LoginResponseMessage> login(@Header("Authorization") String authHeader);
 
     @GET("radio")
-    Call<Object> stopRadio(@Header("Session-Token") String token);
+    Call<ResponseBody> stopRadio(@Header("Session-Token") String token);
 
     @POST("radio")
-    Call<Object> startRadio(@Header("Session-Token") String token, @Body StationPathDTO stationPathDTO);
+    Call<ResponseBody> startRadio(@Header("Session-Token") String token, @Body StationPathDTO stationPathDTO);
 
     @POST("station")
     Call<StationDTO> addStation(@Header("Session-Token") String token, @Body StationDTO stationDTO);
@@ -30,5 +31,8 @@ public interface RestService {
 
     @DELETE("station/{stationId}")
     Call<StationDTO> deleteStation(@Header("Session-Token") String token, @Path("stationId") Long stationId);
+
+    @GET("radio/currentStation")
+    Call<StationDTO> getCurrentStation(@Header("Session-Token") String token);
 
 }
